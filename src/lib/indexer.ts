@@ -26,13 +26,18 @@ const MAX_INSCRIPTION_SIZE = 90_000  // bytes
 
 // ─── RPC client ──────────────────────────────────────────────────────────────
 
+// On Netlify (or any non-localhost origin) use the proxy to avoid CORS.
+// In Arc Studio sandbox (localhost / studio preview) use the RPC directly.
+function getRpcUrl(): string {
+  if (TARGET_CHAIN_ID !== arc.id) return 'https://rpc.testnet.arc.io'
+  const host = typeof window !== 'undefined' ? window.location.hostname : ''
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.arc.io') || host.endsWith('.e2b.dev') || host.endsWith('.preview.studio.arc.io')
+  return isLocal ? 'https://rpc.mainnet.arc.io' : '/api/rpc'
+}
+
 export const viemClient = createPublicClient({
   chain: TARGET_CHAIN_ID === arc.id ? arc : arcTestnet,
-  transport: http(
-    TARGET_CHAIN_ID === arc.id
-      ? 'https://rpc.mainnet.arc.io'
-      : 'https://rpc.testnet.arc.io'
-  ),
+  transport: http(getRpcUrl()),
 })
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
