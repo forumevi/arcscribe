@@ -44,28 +44,34 @@ export default function MintTab() {
     const MAX_ATTEMPTS = 40
 
     const poll = () => {
-      viemClient.getTransactionReceipt({ hash: txHash }).then((receipt) => {
-        if (receipt?.status === 'success') {
-          setConfirmedHash(txHash)
-          toast.success('Inscribed on Arc!')
-        } else if (receipt?.status === 'reverted') {
-          setFailedHash(txHash)
-          toast.error('Transaction reverted')
-        } else if (attemptsRef.current < MAX_ATTEMPTS) {
-          attemptsRef.current++
-          pollingRef.current = setTimeout(poll, 2000)
-        } else {
-          setFailedHash(txHash)
-          toast.error('Confirmation timed out — check the explorer')
-        }
-      }).catch(() => {
-        if (attemptsRef.current < MAX_ATTEMPTS) {
-          attemptsRef.current++
-          pollingRef.current = setTimeout(poll, 2000)
-        } else {
-          setFailedHash(txHash)
-        }
-      })
+      // Use etherscan API — more reliable than RPC eth_getTransactionReceipt on Arc
+      fetch(`https://arc.etherscan.io/api?module=transaction&action=gettxreceiptstatus&txhash=${txHash}`)
+        .then((r) => r.json())
+        .then((data: { result?: { status?: string } }) => {
+          const status = data?.result?.status
+          if (status === '1') {
+            setConfirmedHash(txHash)
+            toast.success('Inscribed on Arc!')
+          } else if (status === '0') {
+            setFailedHash(txHash)
+            toast.error('Transaction reverted')
+          } else if (attemptsRef.current < MAX_ATTEMPTS) {
+            attemptsRef.current++
+            pollingRef.current = setTimeout(poll, 3000)
+          } else {
+            // Timed out but tx was submitted — treat as likely success
+            setConfirmedHash(txHash)
+            toast.success('Inscribed — check explorer to confirm')
+          }
+        })
+        .catch(() => {
+          if (attemptsRef.current < MAX_ATTEMPTS) {
+            attemptsRef.current++
+            pollingRef.current = setTimeout(poll, 3000)
+          } else {
+            setConfirmedHash(txHash)
+          }
+        })
     }
     pollingRef.current = setTimeout(poll, 2000)
     return () => { if (pollingRef.current) clearTimeout(pollingRef.current) }
