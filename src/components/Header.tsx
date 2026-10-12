@@ -1,4 +1,6 @@
-import { ConnectKitButton } from 'connectkit'
+import { ConnectKitButton, useModal } from 'connectkit'
+import { useAccount, useDisconnect, useEnsName } from 'wagmi'
+import { useState, useRef, useEffect } from 'react'
 
 import type { TabId } from '../types'
 
@@ -9,6 +11,83 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'portfolio',  label: 'Portfolio', icon: '▦' },
   { id: 'tokens',     label: 'ARC-20',    icon: '◆' },
 ]
+
+function WalletButton() {
+  const { address, isConnected } = useAccount()
+  const { disconnect } = useDisconnect()
+  const { data: ens } = useEnsName({ address })
+  const { openProfile } = useModal()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  if (!isConnected || !address) {
+    return <ConnectKitButton />
+  }
+
+  const label = ens ?? `${address.slice(0, 6)}…${address.slice(-4)}`
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
+        style={{
+          background: open ? 'var(--surface-muted)' : 'var(--surface-strong)',
+          border: '1px solid var(--border)',
+          color: 'var(--ink)',
+          boxShadow: '0 1px 4px rgba(17,24,39,0.08)',
+        }}
+      >
+        <span
+          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+          style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' }}
+        >
+          {label.slice(0, 1).toUpperCase()}
+        </span>
+        <span>{label}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--subtle)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 mt-2 w-48 rounded-2xl overflow-hidden"
+          style={{
+            background: 'var(--surface-strong)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 8px 32px rgba(17,24,39,0.12)',
+            zIndex: 100,
+          }}
+        >
+          <button
+            onClick={() => { setOpen(false); openProfile() }}
+            className="w-full px-4 py-3 text-sm font-medium text-left transition-colors hover:bg-[var(--surface-muted)]"
+            style={{ color: 'var(--ink)' }}
+          >
+            View profile
+          </button>
+          <div style={{ height: 1, background: 'var(--border)' }} />
+          <button
+            onClick={() => { setOpen(false); disconnect() }}
+            className="w-full px-4 py-3 text-sm font-medium text-left transition-colors hover:bg-red-50"
+            style={{ color: 'var(--danger)' }}
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface HeaderProps {
   activeTab: TabId
@@ -102,8 +181,8 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           })}
         </nav>
 
-        {/* Connect button */}
-        <ConnectKitButton />
+        {/* Wallet button */}
+        <WalletButton />
       </div>
     </header>
   )
