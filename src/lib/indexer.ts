@@ -21,7 +21,9 @@ import { TARGET_CHAIN_ID } from '../config'
 
 const MINT_ADDRESS = '0x0000000000000000000000000000000000004663'
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD'
-const MAX_SCAN_BLOCKS = 2000  // scan last N blocks — fetched in parallel batches
+const MAX_SCAN_BLOCKS = 300   // scan last N blocks — keep low to avoid RPC rate limits
+const BATCH_SIZE = 5          // parallel block fetches per batch — low to avoid rate limits
+const BATCH_DELAY_MS = 200    // ms between batches
 const MAX_INSCRIPTION_SIZE = 90_000  // bytes
 
 // ─── RPC client ──────────────────────────────────────────────────────────────
@@ -271,6 +273,19 @@ function processTx(
 
 // ─── Main indexer ─────────────────────────────────────────────────────────────
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+async function fetchBlockWithRetry(b: bigint, retries = 3): Promise<Awaited<ReturnType<typeof viemClient.getBlock>>> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await viemClient.getBlock({ blockNumber: b, includeTransactions: true })
+    } catch {
+      if (attempt < retries - 1) await sleep(500 * (attempt + 1))
+    }
+  }
+  throw new Error(`Failed to fetch block ${b} after ${retries} retries`)
+}
+
 export async function startIndexer(): Promise<void> {
   if (indexing || indexed) return
   indexing = true
@@ -283,50 +298,54 @@ export async function startIndexer(): Promise<void> {
       : 0n
 
     const totalBlocks = Number(latestBlock - fromBlock) || 1
-
-    // Fetch blocks in parallel batches of 20
-    const BATCH = 20
     const blockNums: bigint[] = []
     for (let b = fromBlock; b <= latestBlock; b++) blockNums.push(b)
 
+    // Process blocks in small batches, process immediately (don't accumulate all in memory)
+    let txPosition = 0
     let done = 0
-    const blockResults: Array<{ b: bigint; block: Awaited<ReturnType<typeof viemClient.getBlock>> }> = []
 
-    for (let i = 0; i < blockNums.length; i += BATCH) {
-      const batch = blockNums.slice(i, i + BATCH)
-      const results = await Promise.all(
-        batch.map((b) => viemClient.getBlock({ blockNumber: b, includeTransactions: true }))
+    for (let i = 0; i < blockNums.length; i += BATCH_SIZE) {
+      const batch = blockNums.slice(i, i + BATCH_SIZE)
+
+      // Fetch batch in parallel, skip blocks that fail
+      const results = await Promise.allSettled(
+        batch.map((b) => fetchBlockWithRetry(b))
       )
-      for (let j = 0; j < batch.length; j++) {
-        blockResults.push({ b: batch[j], block: results[j] })
+
+      // Sort by block number and process in order
+      const successful = results
+        .map((r, j) => r.status === 'fulfilled' ? { b: batch[j], block: r.value } : null)
+        .filter((x): x is { b: bigint; block: Awaited<ReturnType<typeof viemClient.getBlock>> } => x !== null)
+        .sort((a, c) => (a.b < c.b ? -1 : 1))
+
+      for (const { b, block } of successful) {
+        const ts = Number(block.timestamp)
+        for (let ti = 0; ti < block.transactions.length; ti++) {
+          const tx = block.transactions[ti] as { hash: string; from: string; to: string | null; input: Hex }
+          processTx(tx.hash, tx.from, tx.to, tx.input, Number(b), ti, ts, txPosition)
+          txPosition++
+        }
       }
+
       done += batch.length
       indexProgress = Math.round((done / totalBlocks) * 100)
-      notify() // notify after every batch so UI updates progressively
-    }
+      notify()
 
-    // Process in order
-    let txPosition = 0
-    blockResults.sort((a, b) => (a.b < b.b ? -1 : 1))
-    for (const { b, block } of blockResults) {
-      const ts = Number(block.timestamp)
-      for (let ti = 0; ti < block.transactions.length; ti++) {
-        const tx = block.transactions[ti] as { hash: string; from: string; to: string | null; input: Hex }
-        processTx(tx.hash, tx.from, tx.to, tx.input, Number(b), ti, ts, txPosition)
-        txPosition++
-      }
+      // Delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < blockNums.length) await sleep(BATCH_DELAY_MS)
     }
 
     indexed = true
     indexing = false
     indexProgress = 100
     notify()
-
-    // Poll for new blocks
     watchNewBlocks()
   } catch (err) {
     console.error('[indexer] error:', err)
     indexing = false
+    // Retry after 5 seconds
+    setTimeout(() => { startIndexer().catch(console.error) }, 5000)
     notify()
   }
 }
