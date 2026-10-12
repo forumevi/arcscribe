@@ -5,6 +5,7 @@ import {
 } from '../lib/indexer'
 import type { Inscription } from '../types'
 import InscriptionCard from './InscriptionCard'
+import InscriptionModal from './InscriptionModal'
 
 type Filter = 'all' | 'image' | 'text' | 'arc20'
 
@@ -29,6 +30,7 @@ export default function ExploreTab() {
   const [indexing, setIndexing] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<Inscription | null>(null)
 
   useEffect(() => {
     const refresh = () => {
@@ -63,6 +65,7 @@ export default function ExploreTab() {
   ]
 
   return (
+    <>
     <div className="min-h-dvh" style={{ background: 'var(--bg-gradient)' }}>
       {/* Hero */}
       <div className="relative overflow-hidden pt-16 pb-12 px-4 text-center">
@@ -165,7 +168,7 @@ export default function ExploreTab() {
         {filtered.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {filtered.map((ins) => (
-              <InscriptionCard key={ins.id} inscription={ins} />
+              <InscriptionCard key={ins.id} inscription={ins} onOpen={() => setSelected(ins)} />
             ))}
           </div>
         ) : (
@@ -195,5 +198,10 @@ export default function ExploreTab() {
         )}
       </div>
     </div>
+
+    {selected && (
+      <InscriptionModal inscription={selected} onClose={() => setSelected(null)} />
+    )}
+  </>
   )
 }

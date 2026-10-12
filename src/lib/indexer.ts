@@ -21,7 +21,7 @@ import { TARGET_CHAIN_ID } from '../config'
 
 const MINT_ADDRESS = '0x0000000000000000000000000000000000004663'
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD'
-const MAX_SCAN_BLOCKS = 50    // scan last N blocks on init — keep low for browser perf
+const MAX_SCAN_BLOCKS = 2000  // scan last N blocks — fetched in parallel batches
 const MAX_INSCRIPTION_SIZE = 90_000  // bytes
 
 // ─── RPC client ──────────────────────────────────────────────────────────────
@@ -284,8 +284,8 @@ export async function startIndexer(): Promise<void> {
 
     const totalBlocks = Number(latestBlock - fromBlock) || 1
 
-    // Fetch blocks in parallel batches of 10
-    const BATCH = 10
+    // Fetch blocks in parallel batches of 20
+    const BATCH = 20
     const blockNums: bigint[] = []
     for (let b = fromBlock; b <= latestBlock; b++) blockNums.push(b)
 
@@ -302,7 +302,7 @@ export async function startIndexer(): Promise<void> {
       }
       done += batch.length
       indexProgress = Math.round((done / totalBlocks) * 100)
-      notify()
+      notify() // notify after every batch so UI updates progressively
     }
 
     // Process in order

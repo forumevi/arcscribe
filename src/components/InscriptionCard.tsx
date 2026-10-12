@@ -9,6 +9,7 @@ interface InscriptionCardProps {
   onBuy?: () => void
   onList?: () => void
   onDelist?: () => void
+  onOpen?: () => void
   showActions?: boolean
   compact?: boolean
 }
@@ -115,6 +116,7 @@ export default function InscriptionCard({
   onBuy,
   onList,
   onDelist,
+  onOpen,
   showActions = false,
   compact = false,
 }: InscriptionCardProps) {
@@ -125,8 +127,10 @@ export default function InscriptionCard({
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={onOpen}
       className="rounded-2xl overflow-hidden transition-all duration-200"
       style={{
+        cursor: onOpen ? 'pointer' : 'default',
         background: 'var(--surface-strong)',
         border: `1.5px solid ${hover ? 'var(--accent-bright)' : 'var(--border)'}`,
         transform: hover ? 'translateY(-3px)' : 'none',

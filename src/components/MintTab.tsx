@@ -4,7 +4,6 @@ import { toHex } from 'viem'
 import { toast } from 'sonner'
 import { TARGET_CHAIN_ID } from '../config'
 import { buildTxExplorerUrl } from '@/onchain-facts'
-import { viemClient } from '../lib/indexer'
 
 const MINT_ADDRESS = '0x0000000000000000000000000000000000004663'
 const MAX_SIZE_BYTES = 90_000
