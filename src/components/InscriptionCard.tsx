@@ -13,6 +13,31 @@ interface InscriptionCardProps {
   compact?: boolean
 }
 
+function ContentTag({ type }: { type: string }) {
+  if (type.startsWith('image/')) {
+    return (
+      <span className="absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full"
+        style={{ background: 'var(--tag-image)', color: 'var(--tag-image-ink)' }}>
+        Image
+      </span>
+    )
+  }
+  if (type === 'application/json') {
+    return (
+      <span className="absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full"
+        style={{ background: 'var(--tag-arc20)', color: 'var(--tag-arc20-ink)' }}>
+        ARC-20
+      </span>
+    )
+  }
+  return (
+    <span className="absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full"
+      style={{ background: 'var(--tag-text)', color: 'var(--tag-text-ink)' }}>
+      Text
+    </span>
+  )
+}
+
 function renderContent(ins: Inscription) {
   const { contentType, content } = ins
 
@@ -21,8 +46,7 @@ function renderContent(ins: Inscription) {
       <img
         src={content}
         alt={ins.name ?? `#${ins.number}`}
-        className="w-full h-full object-contain"
-        style={{ imageRendering: contentType === 'image/pixel' ? 'pixelated' : 'auto' }}
+        className="w-full h-full object-contain p-2"
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
       />
     )
@@ -37,11 +61,9 @@ function renderContent(ins: Inscription) {
       } catch { return '' }
     })()
     return (
-      <div className="w-full h-full flex items-center justify-center p-4 overflow-hidden">
-        <p
-          className="text-xs leading-relaxed text-center line-clamp-6 mono"
-          style={{ color: 'var(--muted)', wordBreak: 'break-all' }}
-        >
+      <div className="w-full h-full flex items-center justify-center p-4">
+        <p className="text-sm leading-relaxed text-center line-clamp-5 mono"
+          style={{ color: 'var(--ink-2)', wordBreak: 'break-all' }}>
           {text}
         </p>
       </div>
@@ -61,27 +83,16 @@ function renderContent(ins: Inscription) {
         return null
       } catch { return null }
     })()
-    const label = typeof jsonObj?.['op'] === 'string' ? jsonObj['op'].toUpperCase() : 'JSON'
-    const tick  = typeof jsonObj?.['tick'] === 'string' ? jsonObj['tick'] : ''
+    const label = (typeof jsonObj?.['op'] === 'string' ? jsonObj['op'].toUpperCase() : 'JSON')
+    const tick = typeof jsonObj?.['tick'] === 'string' ? jsonObj['tick'] : ''
     return (
-      <div
-        className="w-full h-full flex flex-col items-center justify-center gap-1"
-        style={{
-          background: 'linear-gradient(135deg, rgba(172,198,233,0.08) 0%, rgba(123,172,216,0.04) 100%)',
-        }}
-      >
-        <span
-          className="display font-bold tabular-nums"
-          style={{ color: 'var(--accent)', fontSize: tick.length > 4 ? '1.25rem' : '1.75rem' }}
-        >
-          {tick || '{ }'}
-        </span>
-        <span
-          className="text-[10px] uppercase tracking-[0.15em] font-semibold"
-          style={{ color: 'var(--subtle)' }}
-        >
-          {label}
-        </span>
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5">
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-1"
+          style={{ background: 'var(--tag-arc20)', color: 'var(--tag-arc20-ink)' }}>
+          <span className="text-xl font-bold">◆</span>
+        </div>
+        <span className="text-xl font-bold display" style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>{tick}</span>
+        <span className="text-xs uppercase tracking-widest font-semibold" style={{ color: 'var(--subtle)' }}>{label}</span>
       </div>
     )
   }
@@ -114,111 +125,81 @@ export default function InscriptionCard({
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="rounded-2xl overflow-hidden transition-all duration-200 flex flex-col"
+      className="rounded-2xl overflow-hidden transition-all duration-200"
       style={{
-        background: 'var(--surface)',
-        border: `1px solid ${hover ? 'rgba(172,198,233,0.25)' : 'var(--border)'}`,
+        background: 'var(--surface-strong)',
+        border: `1.5px solid ${hover ? 'var(--accent-bright)' : 'var(--border)'}`,
         transform: hover ? 'translateY(-3px)' : 'none',
         boxShadow: hover
-          ? '0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(172,198,233,0.08)'
-          : '0 2px 8px rgba(0,0,0,0.15)',
+          ? '0 12px 40px rgba(37,99,235,0.12), 0 4px 12px rgba(17,24,39,0.08)'
+          : '0 2px 8px rgba(17,24,39,0.06)',
       }}
     >
       {/* Preview */}
       <div
         className="relative overflow-hidden"
         style={{
-          height: compact ? 128 : 200,
-          background: 'rgba(0,0,0,0.3)',
-          flexShrink: 0,
+          height: compact ? 110 : 185,
+          background: 'linear-gradient(135deg, #f8faff 0%, #f1f4fd 100%)',
         }}
       >
         {renderContent(ins)}
-
-        {/* Number badge */}
+        <ContentTag type={ins.contentType} />
+        {listing && (
+          <span
+            className="absolute top-2 right-2 text-xs px-2.5 py-1 rounded-full font-bold tabular-nums"
+            style={{
+              background: 'linear-gradient(135deg, #059669, #10b981)',
+              color: '#fff',
+            }}
+          >
+            {formatUsdc(listing.price)} USDC
+          </span>
+        )}
         <span
-          className="absolute top-2 left-2 mono text-xs px-2 py-0.5 rounded-lg tabular-nums"
-          style={{
-            background: 'rgba(0,0,0,0.6)',
-            color: 'var(--accent)',
-            backdropFilter: 'blur(8px)',
-            fontSize: '10px',
-          }}
+          className="absolute bottom-2 right-2 mono text-xs px-2 py-0.5 rounded-lg font-medium"
+          style={{ background: 'rgba(17,24,39,0.08)', color: 'var(--subtle)' }}
         >
           #{ins.number}
         </span>
+      </div>
 
-        {/* Price badge */}
-        {listing && (
-          <span
-            className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-lg font-semibold tabular-nums"
-            style={{
-              background: 'rgba(141,216,159,0.2)',
-              color: 'var(--success)',
-              border: '1px solid rgba(141,216,159,0.3)',
-              backdropFilter: 'blur(8px)',
-              fontSize: '10px',
-            }}
-          >
-            {formatUsdc(listing.price)}
+      {/* Info */}
+      <div className="p-3 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold truncate display" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+            {ins.name ?? `Inscription #${ins.number}`}
           </span>
-        )}
-
-        {/* Hover overlay — explorer link */}
-        {hover && (
           <a
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
+            className="text-xs shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-colors"
+            style={{ background: 'var(--surface-muted)', color: 'var(--muted)' }}
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-0 flex items-end justify-end p-2"
-            style={{ background: 'rgba(0,0,0,0.0)' }}
           >
-            <span
-              className="text-xs px-2 py-1 rounded-lg font-medium"
-              style={{
-                background: 'rgba(0,0,0,0.7)',
-                color: 'var(--accent)',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              Explorer ↗
-            </span>
+            ↗
           </a>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="p-3 flex flex-col gap-2 flex-1">
-        <div className="flex items-start justify-between gap-1">
-          <span
-            className="text-sm font-semibold leading-tight truncate"
-            style={{ color: 'var(--ink)' }}
-          >
-            {ins.name ?? `Inscription #${ins.number}`}
-          </span>
         </div>
 
         {!compact && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--subtle)' }}>
-            <span className="mono truncate flex-1">
-              {ins.owner.slice(0, 6)}…{ins.owner.slice(-4)}
-            </span>
-            <span className="shrink-0 tabular-nums">{(ins.size / 1024).toFixed(1)}KB</span>
+          <div className="flex items-center gap-2 text-xs tabular-nums" style={{ color: 'var(--subtle)' }}>
+            <span className="mono truncate">{ins.owner.slice(0, 6)}…{ins.owner.slice(-4)}</span>
+            <span>·</span>
+            <span>{(ins.size / 1024).toFixed(1)} KB</span>
           </div>
         )}
 
-        {/* Actions */}
         {showActions && (
-          <div className="flex gap-1.5 mt-auto pt-1">
+          <div className="pt-1 flex gap-2">
             {listing && onBuy && (
               <button
                 onClick={onBuy}
-                className="flex-1 py-2 rounded-xl text-xs font-bold transition-all tabular-nums"
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-all"
                 style={{
-                  background: 'var(--accent)',
-                  color: '#0a1628',
-                  boxShadow: '0 2px 12px rgba(172,198,233,0.25)',
+                  background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)',
+                  color: '#fff',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
                 }}
               >
                 Buy · {formatUsdc(listing.price)} USDC
@@ -227,10 +208,10 @@ export default function InscriptionCard({
             {!listing && onList && (
               <button
                 onClick={onList}
-                className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
+                className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
                 style={{
-                  background: 'var(--surface-strong)',
-                  color: 'var(--ink)',
+                  background: 'var(--surface-muted)',
+                  color: 'var(--ink-2)',
                   border: '1px solid var(--border)',
                 }}
               >
@@ -240,14 +221,14 @@ export default function InscriptionCard({
             {listing && onDelist && (
               <button
                 onClick={onDelist}
-                className="py-2 px-3 rounded-xl text-xs font-semibold transition-all"
+                className="py-2 px-3 rounded-xl text-sm font-semibold transition-all"
                 style={{
-                  background: 'rgba(232,109,122,0.10)',
+                  background: '#fef2f2',
                   color: 'var(--danger)',
-                  border: '1px solid rgba(232,109,122,0.2)',
+                  border: '1px solid #fecaca',
                 }}
               >
-                ✕
+                Delist
               </button>
             )}
           </div>

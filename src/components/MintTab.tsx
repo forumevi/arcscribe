@@ -206,7 +206,7 @@ export default function MintTab() {
               className="relative rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all"
               style={{
                 borderColor: dragOver ? 'var(--accent)' : 'var(--border-strong)',
-                background: dragOver ? 'rgba(172,198,233,0.06)' : 'rgba(0,0,0,0.15)',
+                background: dragOver ? 'rgba(37,99,235,0.04)' : 'var(--surface-muted)',
                 minHeight: 160,
                 padding: '2rem',
               }}
@@ -281,7 +281,7 @@ export default function MintTab() {
               rows={7}
               className="w-full rounded-xl p-4 text-sm resize-none outline-none leading-relaxed"
               style={{
-                background: 'rgba(0,0,0,0.2)',
+                background: 'var(--surface-muted)',
                 color: 'var(--ink)',
                 border: '1px solid var(--border)',
                 fontFamily: "'JetBrains Mono', monospace",
@@ -306,9 +306,9 @@ export default function MintTab() {
                     onClick={() => setArc20Op(op)}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all"
                     style={{
-                      background: arc20Op === op ? 'rgba(172,198,233,0.15)' : 'rgba(0,0,0,0.2)',
+                      background: arc20Op === op ? 'rgba(37,99,235,0.08)' : 'var(--surface-muted)',
                       color: arc20Op === op ? 'var(--accent)' : 'var(--subtle)',
-                      border: arc20Op === op ? '1px solid rgba(172,198,233,0.35)' : '1px solid transparent',
+                      border: arc20Op === op ? '1px solid rgba(37,99,235,0.3)' : '1px solid transparent',
                     }}
                   >
                     {op}
@@ -329,7 +329,7 @@ export default function MintTab() {
                 maxLength={6}
                 className="w-full rounded-xl px-3 py-2.5 text-lg font-bold mono outline-none tracking-widest"
                 style={{
-                  background: 'rgba(0,0,0,0.2)',
+                  background: 'var(--surface-muted)',
                   color: 'var(--accent)',
                   border: '1px solid var(--border)',
                   letterSpacing: '0.1em',
@@ -352,7 +352,7 @@ export default function MintTab() {
                       onChange={(e) => f.set(e.target.value)}
                       placeholder={f.ph}
                       className="w-full rounded-xl px-3 py-2.5 text-sm outline-none mono tabular-nums"
-                      style={{ background: 'rgba(0,0,0,0.2)', color: 'var(--ink)', border: '1px solid var(--border)' }}
+                      style={{ background: 'var(--surface-muted)', color: 'var(--ink)', border: '1px solid var(--border)' }}
                     />
                   </div>
                 ))}
@@ -367,7 +367,7 @@ export default function MintTab() {
                   onChange={(e) => setArc20Amt(e.target.value)}
                   placeholder="1000"
                   className="w-full rounded-xl px-3 py-2.5 text-sm outline-none mono tabular-nums"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: 'var(--ink)', border: '1px solid var(--border)' }}
+                  style={{ background: 'var(--surface-muted)', color: 'var(--ink)', border: '1px solid var(--border)' }}
                 />
               </div>
             )}
@@ -427,10 +427,10 @@ export default function MintTab() {
         className="w-full py-4 rounded-2xl font-bold text-base transition-all"
         style={{
           background: canMint || wrongChain
-            ? 'linear-gradient(135deg, var(--accent) 0%, #7bacd8 100%)'
+            ? 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)'
             : 'var(--surface-muted)',
-          color: canMint || wrongChain ? '#0a1628' : 'var(--subtle)',
-          boxShadow: canMint ? '0 4px 24px rgba(172,198,233,0.3)' : 'none',
+          color: canMint || wrongChain ? '#ffffff' : 'var(--subtle)',
+          boxShadow: canMint ? '0 4px 24px rgba(37,99,235,0.3)' : 'none',
           cursor: !isConnected && !wrongChain ? 'not-allowed' : 'pointer',
         }}
       >
@@ -447,8 +447,8 @@ export default function MintTab() {
         <div
           className="rounded-2xl p-5 space-y-3"
           style={{
-            background: 'rgba(141,216,159,0.08)',
-            border: '1px solid rgba(141,216,159,0.25)',
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
           }}
         >
           <div className="flex items-center gap-2">

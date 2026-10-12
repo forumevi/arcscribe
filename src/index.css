@@ -3,21 +3,29 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0d1b2f;
-  --bg-gradient: linear-gradient(180deg, #0a1628 0%, #0d1b2f 58%, #122d45 100%);
-  --surface: rgba(255, 255, 255, 0.07);
-  --surface-strong: rgba(255, 255, 255, 0.11);
-  --surface-muted: #1f2f44;
-  --ink: #f9faf3;
-  --ink-2: #e3ecf9;
-  --muted: #cbd5e1;
-  --subtle: #94a3b8;
-  --border: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(203, 219, 242, 0.40);
-  --accent: #acc6e9;
-  --accent-hover: #cbdbf2;
-  --success: #8dd89f;
-  --danger: #e86d7a;
+  --bg: #ffffff;
+  --bg-gradient: linear-gradient(160deg, #f0f4ff 0%, #faf9ff 40%, #fff8f4 100%);
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-strong: rgba(255, 255, 255, 0.97);
+  --surface-muted: #f4f5f9;
+  --ink: #111827;
+  --ink-2: #1e3a5f;
+  --muted: #4b5563;
+  --subtle: #9ca3af;
+  --border: rgba(17, 24, 39, 0.09);
+  --border-strong: rgba(17, 24, 39, 0.22);
+  --accent: #1e3a5f;
+  --accent-bright: #2563eb;
+  --accent-hover: #1d4ed8;
+  --focus: #93c5fd;
+  --success: #059669;
+  --danger: #dc2626;
+  --tag-image: #ede9fe;
+  --tag-image-ink: #5b21b6;
+  --tag-text: #dcfce7;
+  --tag-text-ink: #166534;
+  --tag-arc20: #fef3c7;
+  --tag-arc20-ink: #92400e;
 }
 
 * {
@@ -31,6 +39,24 @@ body {
   background-attachment: fixed;
   color: var(--ink);
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism card helper */
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(17,24,39,0.06), 0 1px 3px rgba(17,24,39,0.04);
+}
+
+/* Gradient text */
+.grad-text {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .display {
