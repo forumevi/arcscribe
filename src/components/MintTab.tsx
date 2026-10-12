@@ -29,7 +29,11 @@ export default function MintTab() {
   const { chainId, isConnected } = useAccount()
   const { switchChain } = useSwitchChain()
   const { sendTransaction, data: txHash, isPending } = useSendTransaction()
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
+    pollingInterval: 1000,
+    timeout: 30_000,
+  })
 
   const [mode, setMode] = useState<MintMode>('file')
   const [file, setFile] = useState<File | null>(null)
