@@ -6,7 +6,7 @@
 import { http, createConfig } from 'wagmi'
 import { mainnet } from 'wagmi/chains'
 import { arcTestnet, arc } from 'viem/chains'
-import { injected } from 'wagmi/connectors'
+import { injected, metaMask } from 'wagmi/connectors'
 import { registerChain } from './tracing'
 
 // Pre-register chain RPC URLs so trace events show correct chain names immediately
@@ -14,8 +14,12 @@ registerChain(arcTestnet.id, arcTestnet.rpcUrls.default.http[0])
 registerChain(arc.id, arc.rpcUrls.default.http[0])
 
 export const config = createConfig({
-  chains: [arc, arcTestnet, mainnet], // arc mainnet first; mainnet needed for ENS resolution
-  connectors: [injected()],
+  chains: [arc, arcTestnet, mainnet],
+  connectors: [
+    injected({ target: 'metaMask' }),
+    metaMask(),
+    injected(), // catches Rabby, Phantom, and any other injected wallet
+  ],
   transports: {
     [arc.id]: http('https://rpc.mainnet.arc.io'),
     [arcTestnet.id]: http('https://rpc.testnet.arc.io'),
