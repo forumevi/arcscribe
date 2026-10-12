@@ -11,7 +11,7 @@ ArcScribe is an onchain inscription protocol on Arc mainnet. Inspired by Bitcoin
 
 | Contract | Network | Address | Deployer |
 |---|---|---|---|
-| InscriptionMarket | Arc Mainnet (5042) | (not deployed yet) | - |
+| InscriptionMarket | Arc Mainnet (5042) | 0xcF6128Cc99C3430e75f3A9fe1eC43f6574333985 | 0x95773C1f40B82DD8D0529471f6A6016fdfE990Aa |
 
 ## Environment Variables Needed
 - `VITE_MARKET_ADDRESS` — InscriptionMarket contract address on Arc mainnet

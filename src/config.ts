@@ -29,3 +29,8 @@ export const ARC_TESTNET_CHAIN_ID = arcTestnet.id  // 5042002
 
 // Default to mainnet for this app (microgrant submission)
 export const TARGET_CHAIN_ID = ARC_CHAIN_ID
+
+// Deployed contract addresses — Arc mainnet
+export const INSCRIPTION_MARKET_ADDRESS = (
+  import.meta.env.VITE_MARKET_ADDRESS ?? '0xcF6128Cc99C3430e75f3A9fe1eC43f6574333985'
+) as `0x${string}`
