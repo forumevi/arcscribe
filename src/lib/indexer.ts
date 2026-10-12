@@ -21,7 +21,7 @@ import { TARGET_CHAIN_ID } from '../config'
 
 const MINT_ADDRESS = '0x0000000000000000000000000000000000004663'
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD'
-const MAX_SCAN_BLOCKS = 500   // scan last N blocks on init (configurable)
+const MAX_SCAN_BLOCKS = 50    // scan last N blocks on init — keep low for browser perf
 const MAX_INSCRIPTION_SIZE = 90_000  // bytes
 
 // ─── RPC client ──────────────────────────────────────────────────────────────
@@ -269,6 +269,7 @@ function processTx(
 export async function startIndexer(): Promise<void> {
   if (indexing || indexed) return
   indexing = true
+  notify()
 
   try {
     const latestBlock = await viemClient.getBlockNumber()
@@ -276,23 +277,39 @@ export async function startIndexer(): Promise<void> {
       ? latestBlock - BigInt(MAX_SCAN_BLOCKS)
       : 0n
 
+    const totalBlocks = Number(latestBlock - fromBlock) || 1
+
+    // Fetch blocks in parallel batches of 10
+    const BATCH = 10
+    const blockNums: bigint[] = []
+    for (let b = fromBlock; b <= latestBlock; b++) blockNums.push(b)
+
+    let done = 0
+    const blockResults: Array<{ b: bigint; block: Awaited<ReturnType<typeof viemClient.getBlock>> }> = []
+
+    for (let i = 0; i < blockNums.length; i += BATCH) {
+      const batch = blockNums.slice(i, i + BATCH)
+      const results = await Promise.all(
+        batch.map((b) => viemClient.getBlock({ blockNumber: b, includeTransactions: true }))
+      )
+      for (let j = 0; j < batch.length; j++) {
+        blockResults.push({ b: batch[j], block: results[j] })
+      }
+      done += batch.length
+      indexProgress = Math.round((done / totalBlocks) * 100)
+      notify()
+    }
+
+    // Process in order
     let txPosition = 0
-    const totalBlocks = Number(latestBlock - fromBlock)
-
-    for (let b = fromBlock; b <= latestBlock; b++) {
-      const block = await viemClient.getBlock({ blockNumber: b, includeTransactions: true })
+    blockResults.sort((a, b) => (a.b < b.b ? -1 : 1))
+    for (const { b, block } of blockResults) {
       const ts = Number(block.timestamp)
-
       for (let ti = 0; ti < block.transactions.length; ti++) {
-        const tx = block.transactions[ti] as {
-          hash: string; from: string; to: string | null; input: Hex
-        }
+        const tx = block.transactions[ti] as { hash: string; from: string; to: string | null; input: Hex }
         processTx(tx.hash, tx.from, tx.to, tx.input, Number(b), ti, ts, txPosition)
         txPosition++
       }
-
-      indexProgress = Math.round((Number(b - fromBlock) / totalBlocks) * 100)
-      if (Number(b - fromBlock) % 10 === 0) notify()
     }
 
     indexed = true

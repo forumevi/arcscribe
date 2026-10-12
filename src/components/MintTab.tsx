@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useAccount, useSendTransaction, useSwitchChain } from 'wagmi'
 import { toHex } from 'viem'
 import { toast } from 'sonner'
 import { TARGET_CHAIN_ID } from '../config'
 import { buildTxExplorerUrl } from '@/onchain-facts'
+import { viemClient } from '../lib/indexer'
 
 const MINT_ADDRESS = '0x0000000000000000000000000000000000004663'
 const MAX_SIZE_BYTES = 90_000
@@ -29,11 +30,46 @@ export default function MintTab() {
   const { chainId, isConnected } = useAccount()
   const { switchChain } = useSwitchChain()
   const { sendTransaction, data: txHash, isPending } = useSendTransaction()
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash: txHash,
-    pollingInterval: 1000,
-    timeout: 30_000,
-  })
+  const [confirmedHash, setConfirmedHash] = useState<string | null>(null)
+  const [failedHash, setFailedHash] = useState<string | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const attemptsRef = useRef(0)
+
+  const isConfirming = !!txHash && txHash !== confirmedHash && txHash !== failedHash && !isPending
+  const isSuccess = !!txHash && txHash === confirmedHash
+
+  useEffect(() => {
+    if (!txHash) return
+    attemptsRef.current = 0
+    const MAX_ATTEMPTS = 40
+
+    const poll = () => {
+      viemClient.getTransactionReceipt({ hash: txHash }).then((receipt) => {
+        if (receipt?.status === 'success') {
+          setConfirmedHash(txHash)
+          toast.success('Inscribed on Arc!')
+        } else if (receipt?.status === 'reverted') {
+          setFailedHash(txHash)
+          toast.error('Transaction reverted')
+        } else if (attemptsRef.current < MAX_ATTEMPTS) {
+          attemptsRef.current++
+          pollingRef.current = setTimeout(poll, 2000)
+        } else {
+          setFailedHash(txHash)
+          toast.error('Confirmation timed out — check the explorer')
+        }
+      }).catch(() => {
+        if (attemptsRef.current < MAX_ATTEMPTS) {
+          attemptsRef.current++
+          pollingRef.current = setTimeout(poll, 2000)
+        } else {
+          setFailedHash(txHash)
+        }
+      })
+    }
+    pollingRef.current = setTimeout(poll, 2000)
+    return () => { if (pollingRef.current) clearTimeout(pollingRef.current) }
+  }, [txHash])
 
   const [mode, setMode] = useState<MintMode>('file')
   const [file, setFile] = useState<File | null>(null)
@@ -96,7 +132,7 @@ export default function MintTab() {
       value: 0n,
       data: toHex(new TextEncoder().encode(calldata)),
     }, {
-      onSuccess: () => toast.success('Transaction submitted'),
+      onSuccess: () => toast.info('Transaction submitted — confirming…'),
       onError: (err) => {
         if ((err.message ?? '').toLowerCase().includes('user rejected')) toast.info('Cancelled')
         else toast.error('Transaction failed')
