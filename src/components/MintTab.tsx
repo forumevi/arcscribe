@@ -7,6 +7,7 @@ import { buildTxExplorerUrl } from '@/onchain-facts'
 
 const MINT_ADDRESS = '0x0000000000000000000000000000000000004663'
 const MAX_SIZE_BYTES = 90_000
+const RPC_URL = 'https://rpc.mainnet.arc.io'
 
 type MintMode = 'file' | 'text' | 'json'
 
@@ -25,6 +26,24 @@ const MODE_LABELS: Record<MintMode, { label: string; desc: string; icon: string 
   json:  { label: 'ARC-20', desc: 'Token deploy / mint',      icon: '◎' },
 }
 
+async function waitForReceipt(txHash: string, maxAttempts = 40): Promise<'success' | 'fail' | 'timeout'> {
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 2000))
+    try {
+      const res = await fetch(RPC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionReceipt', params: [txHash], id: 1 }),
+      })
+      const data = await res.json() as { result?: { status?: string } | null }
+      if (data.result) {
+        return data.result.status === '0x1' ? 'success' : 'fail'
+      }
+    } catch { /* retry */ }
+  }
+  return 'timeout'
+}
+
 export default function MintTab() {
   const { chainId, isConnected } = useAccount()
   const { switchChain } = useSwitchChain()
@@ -32,48 +51,33 @@ export default function MintTab() {
   const [confirmedHash, setConfirmedHash] = useState<string | null>(null)
   const [failedHash, setFailedHash] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const attemptsRef = useRef(0)
 
   const isConfirming = !!txHash && txHash !== confirmedHash && txHash !== failedHash && !isPending
   const isSuccess = !!txHash && txHash === confirmedHash
 
   useEffect(() => {
     if (!txHash) return
-    attemptsRef.current = 0
-    const MAX_ATTEMPTS = 40
+    let cancelled = false
 
-    const poll = () => {
-      // Use etherscan API — more reliable than RPC eth_getTransactionReceipt on Arc
-      fetch(`https://arc.etherscan.io/api?module=transaction&action=gettxreceiptstatus&txhash=${txHash}`)
-        .then((r) => r.json())
-        .then((data: { result?: { status?: string } }) => {
-          const status = data?.result?.status
-          if (status === '1') {
-            setConfirmedHash(txHash)
-            toast.success('Inscribed on Arc!')
-          } else if (status === '0') {
-            setFailedHash(txHash)
-            toast.error('Transaction reverted')
-          } else if (attemptsRef.current < MAX_ATTEMPTS) {
-            attemptsRef.current++
-            pollingRef.current = setTimeout(poll, 3000)
-          } else {
-            // Timed out but tx was submitted — treat as likely success
-            setConfirmedHash(txHash)
-            toast.success('Inscribed — check explorer to confirm')
-          }
-        })
-        .catch(() => {
-          if (attemptsRef.current < MAX_ATTEMPTS) {
-            attemptsRef.current++
-            pollingRef.current = setTimeout(poll, 3000)
-          } else {
-            setConfirmedHash(txHash)
-          }
-        })
+    waitForReceipt(txHash).then((result) => {
+      if (cancelled) return
+      if (result === 'success') {
+        setConfirmedHash(txHash)
+        toast.success('Inscribed on Arc!')
+      } else if (result === 'fail') {
+        setFailedHash(txHash)
+        toast.error('Transaction reverted')
+      } else {
+        // timeout — tx was submitted, likely included
+        setConfirmedHash(txHash)
+        toast.success('Inscribed — check explorer to confirm')
+      }
+    })
+
+    return () => {
+      cancelled = true
+      if (pollingRef.current) clearTimeout(pollingRef.current)
     }
-    pollingRef.current = setTimeout(poll, 2000)
-    return () => { if (pollingRef.current) clearTimeout(pollingRef.current) }
   }, [txHash])
 
   const [mode, setMode] = useState<MintMode>('file')
@@ -152,7 +156,6 @@ export default function MintTab() {
   return (
     <div className="max-w-lg mx-auto px-4 py-10 space-y-5">
 
-      {/* Title */}
       <div className="mb-2">
         <h1 className="display text-4xl font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.03em' }}>
           Inscribe
@@ -162,11 +165,7 @@ export default function MintTab() {
         </p>
       </div>
 
-      {/* Mode selector */}
-      <div
-        className="grid grid-cols-3 gap-1 p-1 rounded-2xl"
-        style={{ background: 'var(--surface-muted)' }}
-      >
+      <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl" style={{ background: 'var(--surface-muted)' }}>
         {(Object.entries(MODE_LABELS) as [MintMode, typeof MODE_LABELS[MintMode]][]).map(([m, meta]) => (
           <button
             key={m}
@@ -177,90 +176,52 @@ export default function MintTab() {
               boxShadow: mode === m ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
             }}
           >
-            <span style={{ color: mode === m ? 'var(--accent)' : 'var(--subtle)' }}>
-              {meta.icon}
-            </span>
-            <span
-              className="text-sm font-semibold"
-              style={{ color: mode === m ? 'var(--ink)' : 'var(--subtle)' }}
-            >
+            <span style={{ color: mode === m ? 'var(--accent)' : 'var(--subtle)' }}>{meta.icon}</span>
+            <span className="text-sm font-semibold" style={{ color: mode === m ? 'var(--ink)' : 'var(--subtle)' }}>
               {meta.label}
             </span>
-            <span
-              className="text-[10px]"
-              style={{ color: 'var(--subtle)', opacity: mode === m ? 0.8 : 0.4 }}
-            >
+            <span className="text-[10px]" style={{ color: 'var(--subtle)', opacity: mode === m ? 0.8 : 0.4 }}>
               {meta.desc}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Content card */}
-      <div
-        className="rounded-2xl p-5 space-y-4"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-      >
-        {/* File mode */}
+      <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         {mode === 'file' && (
           <div>
-            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--ink-2)' }}>
-              Upload file
-            </label>
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--ink-2)' }}>Upload file</label>
             <div
               className="relative rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all"
               style={{
                 borderColor: dragOver ? 'var(--accent)' : 'var(--border-strong)',
                 background: dragOver ? 'rgba(37,99,235,0.04)' : 'var(--surface-muted)',
-                minHeight: 160,
-                padding: '2rem',
+                minHeight: 160, padding: '2rem',
               }}
               onClick={() => document.getElementById('file-input')?.click()}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
             >
-              <input
-                id="file-input"
-                type="file"
-                accept="image/*,text/*,application/json"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+              <input id="file-input" type="file" accept="image/*,text/*,application/json" className="hidden" onChange={handleFileChange} />
               {file ? (
                 <>
-                  {dataUri.startsWith('data:image/') && (
-                    <img src={dataUri} alt="" className="max-h-36 rounded-xl object-contain" />
-                  )}
+                  {dataUri.startsWith('data:image/') && <img src={dataUri} alt="" className="max-h-36 rounded-xl object-contain" />}
                   <div className="text-center">
                     <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{file.name}</p>
-                    <p className="text-xs mt-0.5 tabular-nums" style={{ color: 'var(--subtle)' }}>
-                      {(file.size / 1024).toFixed(1)} KB
-                    </p>
+                    <p className="text-xs mt-0.5 tabular-nums" style={{ color: 'var(--subtle)' }}>{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setFile(null); setDataUri('') }}
+                  <button onClick={(e) => { e.stopPropagation(); setFile(null); setDataUri('') }}
                     className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                    style={{ color: 'var(--danger)', background: 'rgba(232,109,122,0.1)' }}
-                  >
-                    Remove
-                  </button>
+                    style={{ color: 'var(--danger)', background: 'rgba(232,109,122,0.1)' }}>Remove</button>
                 </>
               ) : (
                 <>
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
-                    style={{ background: 'var(--surface-muted)', color: 'var(--accent)' }}
-                  >
-                    ↑
-                  </div>
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
+                    style={{ background: 'var(--surface-muted)', color: 'var(--accent)' }}>↑</div>
                   <div className="text-center">
-                    <p className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
-                      Drop a file or click to browse
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--subtle)' }}>
-                      PNG · SVG · GIF · text · JSON · max 90KB
-                    </p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--muted)' }}>Drop a file or click to browse</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--subtle)' }}>PNG · SVG · GIF · text · JSON · max 90KB</p>
                   </div>
                 </>
               )}
@@ -268,13 +229,10 @@ export default function MintTab() {
           </div>
         )}
 
-        {/* Text mode */}
         {mode === 'text' && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-semibold" style={{ color: 'var(--ink-2)' }}>
-                Text content
-              </label>
+              <label className="text-sm font-semibold" style={{ color: 'var(--ink-2)' }}>Text content</label>
               <span className="text-xs tabular-nums mono" style={{ color: 'var(--subtle)' }}>
                 {new TextEncoder().encode(textContent).length} bytes
               </span>
@@ -286,62 +244,39 @@ export default function MintTab() {
               rows={7}
               className="w-full rounded-xl p-4 text-sm resize-none outline-none leading-relaxed"
               style={{
-                background: 'var(--surface-muted)',
-                color: 'var(--ink)',
-                border: '1px solid var(--border)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '13px',
+                background: 'var(--surface-muted)', color: 'var(--ink)', border: '1px solid var(--border)',
+                fontFamily: "'JetBrains Mono', monospace", fontSize: '13px',
               }}
             />
           </div>
         )}
 
-        {/* ARC-20 mode */}
         {mode === 'json' && (
           <div className="space-y-4">
-            {/* Op selector */}
             <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--ink-2)' }}>
-                Operation
-              </label>
+              <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--ink-2)' }}>Operation</label>
               <div className="flex gap-2">
                 {(['deploy', 'mint', 'transfer'] as const).map((op) => (
-                  <button
-                    key={op}
-                    onClick={() => setArc20Op(op)}
+                  <button key={op} onClick={() => setArc20Op(op)}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all"
                     style={{
                       background: arc20Op === op ? 'rgba(37,99,235,0.08)' : 'var(--surface-muted)',
                       color: arc20Op === op ? 'var(--accent)' : 'var(--subtle)',
                       border: arc20Op === op ? '1px solid rgba(37,99,235,0.3)' : '1px solid transparent',
-                    }}
-                  >
+                    }}>
                     {op}
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Ticker */}
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--ink-2)' }}>
-                Ticker
-              </label>
-              <input
-                value={arc20Tick}
-                onChange={(e) => setArc20Tick(e.target.value.toUpperCase())}
-                placeholder="e.g. ARCS"
-                maxLength={6}
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--ink-2)' }}>Ticker</label>
+              <input value={arc20Tick} onChange={(e) => setArc20Tick(e.target.value.toUpperCase())}
+                placeholder="e.g. ARCS" maxLength={6}
                 className="w-full rounded-xl px-3 py-2.5 text-lg font-bold mono outline-none tracking-widest"
-                style={{
-                  background: 'var(--surface-muted)',
-                  color: 'var(--accent)',
-                  border: '1px solid var(--border)',
-                  letterSpacing: '0.1em',
-                }}
+                style={{ background: 'var(--surface-muted)', color: 'var(--accent)', border: '1px solid var(--border)', letterSpacing: '0.1em' }}
               />
             </div>
-
             {arc20Op === 'deploy' ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -349,13 +284,8 @@ export default function MintTab() {
                   { label: 'Mint limit', val: arc20Lim, set: setArc20Lim, ph: '1000' },
                 ].map((f) => (
                   <div key={f.label}>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--subtle)' }}>
-                      {f.label}
-                    </label>
-                    <input
-                      value={f.val}
-                      onChange={(e) => f.set(e.target.value)}
-                      placeholder={f.ph}
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--subtle)' }}>{f.label}</label>
+                    <input value={f.val} onChange={(e) => f.set(e.target.value)} placeholder={f.ph}
                       className="w-full rounded-xl px-3 py-2.5 text-sm outline-none mono tabular-nums"
                       style={{ background: 'var(--surface-muted)', color: 'var(--ink)', border: '1px solid var(--border)' }}
                     />
@@ -364,25 +294,16 @@ export default function MintTab() {
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--ink-2)' }}>
-                  Amount
-                </label>
-                <input
-                  value={arc20Amt}
-                  onChange={(e) => setArc20Amt(e.target.value)}
-                  placeholder="1000"
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--ink-2)' }}>Amount</label>
+                <input value={arc20Amt} onChange={(e) => setArc20Amt(e.target.value)} placeholder="1000"
                   className="w-full rounded-xl px-3 py-2.5 text-sm outline-none mono tabular-nums"
                   style={{ background: 'var(--surface-muted)', color: 'var(--ink)', border: '1px solid var(--border)' }}
                 />
               </div>
             )}
-
-            {/* JSON preview */}
             {arc20Tick && (
-              <div
-                className="rounded-xl p-3 overflow-x-auto"
-                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(172,198,233,0.1)' }}
-              >
+              <div className="rounded-xl p-3 overflow-x-auto"
+                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(172,198,233,0.1)' }}>
                 <p className="text-xs mono" style={{ color: 'var(--accent)', lineHeight: 1.6 }}>
                   {JSON.stringify({
                     p: 'arc-20', op: arc20Op, tick: arc20Tick.toUpperCase(),
@@ -397,20 +318,12 @@ export default function MintTab() {
         )}
       </div>
 
-      {/* Recipient */}
-      <div
-        className="rounded-2xl p-4 space-y-2"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-      >
+      <div className="rounded-2xl p-4 space-y-2" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <label className="block text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
           Recipient
-          <span className="ml-2 text-xs font-normal" style={{ color: 'var(--subtle)' }}>
-            optional — defaults to your wallet
-          </span>
+          <span className="ml-2 text-xs font-normal" style={{ color: 'var(--subtle)' }}>optional — defaults to your wallet</span>
         </label>
-        <input
-          value={recipient}
-          onChange={(e) => setRecipient(e.target.value)}
+        <input value={recipient} onChange={(e) => setRecipient(e.target.value)}
           placeholder="0x… leave empty to inscribe to yourself"
           className="w-full rounded-xl px-3 py-2.5 text-sm outline-none mono"
           style={{ background: 'var(--surface-muted)', color: 'var(--ink)', border: '1px solid var(--border)' }}
@@ -418,14 +331,11 @@ export default function MintTab() {
         {calldataPreview && (
           <p className="text-xs tabular-nums" style={{ color: 'var(--subtle)' }}>
             {calldataSize.toLocaleString()} bytes
-            {calldataSize > MAX_SIZE_BYTES && (
-              <span className="ml-1" style={{ color: 'var(--danger)' }}>— too large!</span>
-            )}
+            {calldataSize > MAX_SIZE_BYTES && <span className="ml-1" style={{ color: 'var(--danger)' }}>— too large!</span>}
           </p>
         )}
       </div>
 
-      {/* CTA */}
       <button
         onClick={handleMint}
         disabled={!canMint && !wrongChain}
@@ -439,41 +349,25 @@ export default function MintTab() {
           cursor: !isConnected && !wrongChain ? 'not-allowed' : 'pointer',
         }}
       >
-        {!isConnected      ? 'Connect wallet to inscribe'  :
-         wrongChain        ? 'Switch to Arc Mainnet'        :
-         isPending         ? 'Confirm in wallet…'           :
-         isConfirming      ? 'Confirming on Arc…'           :
-         !calldataPreview  ? 'Add content to inscribe'      :
-                             'Inscribe to Arc'}
+        {!isConnected     ? 'Connect wallet to inscribe'  :
+         wrongChain       ? 'Switch to Arc Mainnet'        :
+         isPending        ? 'Confirm in wallet…'           :
+         isConfirming     ? 'Confirming on Arc…'           :
+         !calldataPreview ? 'Add content to inscribe'      :
+                            'Inscribe to Arc'}
       </button>
 
-      {/* Success */}
       {isSuccess && txHash && (
-        <div
-          className="rounded-2xl p-5 space-y-3"
-          style={{
-            background: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-          }}
-        >
+        <div className="rounded-2xl p-5 space-y-3" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ background: 'var(--success)' }} />
-            <p className="font-semibold text-sm" style={{ color: 'var(--success)' }}>
-              Inscribed on Arc
-            </p>
+            <p className="font-semibold text-sm" style={{ color: 'var(--success)' }}>Inscribed on Arc</p>
           </div>
-          <a
-            href={buildTxExplorerUrl(TARGET_CHAIN_ID, txHash)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs mono block truncate hover:underline"
-            style={{ color: 'var(--accent)' }}
-          >
+          <a href={buildTxExplorerUrl(TARGET_CHAIN_ID, txHash)} target="_blank" rel="noopener noreferrer"
+            className="text-xs mono block truncate hover:underline" style={{ color: 'var(--accent)' }}>
             {txHash}
           </a>
-          <p className="text-xs" style={{ color: 'var(--subtle)' }}>
-            Your inscription appears in Explore after the next block.
-          </p>
+          <p className="text-xs" style={{ color: 'var(--subtle)' }}>Your inscription appears in Explore after the next block.</p>
         </div>
       )}
     </div>
