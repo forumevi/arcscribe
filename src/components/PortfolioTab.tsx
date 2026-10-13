@@ -80,7 +80,7 @@ function InscriptionDetailCard({
   rank: number | null
   onOpen: () => void
 }) {
-  const explorerUrl = buildTxExplorerUrl(ins.id, TARGET_CHAIN_ID)
+  const explorerUrl = buildTxExplorerUrl(TARGET_CHAIN_ID, ins.id)
 
   const shareText = `I inscribed #${ins.number} on Arc — permanently onchain. No IPFS. No servers. Just the chain. 🔗 arc-scribe.netlify.app`
 
@@ -107,13 +107,7 @@ function InscriptionDetailCard({
       }}
     >
       {/* Card preview */}
-      <div
-        className="rounded-xl overflow-hidden cursor-pointer"
-        style={{ aspectRatio: '1', background: 'var(--surface-muted)' }}
-        onClick={onOpen}
-      >
-        <InscriptionCard inscription={ins} compact onOpen={onOpen} />
-      </div>
+      <InscriptionCard inscription={ins} compact onOpen={onOpen} />
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5">
