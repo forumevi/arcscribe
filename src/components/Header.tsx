@@ -1,15 +1,14 @@
 import { ConnectKitButton, useModal } from 'connectkit'
 import { useAccount, useDisconnect, useEnsName } from 'wagmi'
 import { useState, useRef, useEffect } from 'react'
-
 import type { TabId } from '../types'
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'explore',    label: 'Explore',   icon: '◈' },
-  { id: 'mint',       label: 'Inscribe',  icon: '+' },
-  { id: 'market',     label: 'Market',    icon: '⇄' },
-  { id: 'portfolio',  label: 'Portfolio', icon: '▦' },
-  { id: 'tokens',     label: 'ARC-20',    icon: '◆' },
+  { id: 'explore',   label: 'Explore',   icon: '◈' },
+  { id: 'mint',      label: 'Inscribe',  icon: '+' },
+  { id: 'market',    label: 'Market',    icon: '⇄' },
+  { id: 'portfolio', label: 'Portfolio', icon: '▦' },
+  { id: 'tokens',    label: 'ARC-20',    icon: '◆' },
 ]
 
 function WalletButton() {
@@ -28,9 +27,7 @@ function WalletButton() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  if (!isConnected || !address) {
-    return <ConnectKitButton />
-  }
+  if (!isConnected || !address) return <ConnectKitButton />
 
   const label = ens ?? `${address.slice(0, 6)}…${address.slice(-4)}`
 
@@ -47,14 +44,15 @@ function WalletButton() {
         }}
       >
         <span
-          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
           style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' }}
         >
           {label.slice(0, 1).toUpperCase()}
         </span>
-        <span>{label}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--subtle)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
-          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <span className="hidden sm:inline">{label}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+          style={{ color: 'var(--subtle)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -70,7 +68,7 @@ function WalletButton() {
         >
           <button
             onClick={() => { setOpen(false); openProfile() }}
-            className="w-full px-4 py-3 text-sm font-medium text-left transition-colors hover:bg-[var(--surface-muted)]"
+            className="w-full px-4 py-3 text-sm font-medium text-left hover:bg-[var(--surface-muted)]"
             style={{ color: 'var(--ink)' }}
           >
             View profile
@@ -78,7 +76,7 @@ function WalletButton() {
           <div style={{ height: 1, background: 'var(--border)' }} />
           <button
             onClick={() => { setOpen(false); disconnect() }}
-            className="w-full px-4 py-3 text-sm font-medium text-left transition-colors hover:bg-red-50"
+            className="w-full px-4 py-3 text-sm font-medium text-left hover:bg-red-50"
             style={{ color: 'var(--danger)' }}
           >
             Disconnect
@@ -99,18 +97,18 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
     <header
       className="sticky top-0 z-50 w-full"
       style={{
-        background: 'rgba(255,255,255,0.82)',
+        background: 'rgba(255,255,255,0.88)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--border)',
         boxShadow: '0 1px 0 rgba(17,24,39,0.05)',
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Logo */}
         <button
           onClick={() => onTabChange('explore')}
-          className="flex items-center gap-2.5 shrink-0 group"
+          className="flex items-center gap-2 shrink-0 group"
         >
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm font-bold display transition-transform group-hover:scale-105"
@@ -128,7 +126,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           </div>
         </button>
 
-        {/* Nav tabs */}
+        {/* Desktop nav */}
         <nav
           className="hidden md:flex items-center gap-1 px-1.5 py-1.5 rounded-2xl"
           style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)' }}
@@ -141,9 +139,7 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
                 onClick={() => onTabChange(tab.id)}
                 className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150"
                 style={{
-                  background: active
-                    ? 'var(--surface-strong)'
-                    : 'transparent',
+                  background: active ? 'var(--surface-strong)' : 'transparent',
                   color: active ? 'var(--ink)' : 'var(--muted)',
                   boxShadow: active ? '0 1px 4px rgba(17,24,39,0.10)' : 'none',
                 }}
@@ -161,21 +157,26 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           })}
         </nav>
 
-        {/* Mobile nav */}
-        <nav className="flex md:hidden items-center gap-1 px-1 py-1 rounded-xl" style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)' }}>
+        {/* Mobile nav — icon + label, scrollable */}
+        <nav
+          className="flex md:hidden items-center gap-0.5 px-1 py-1 rounded-2xl overflow-x-auto"
+          style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)', maxWidth: 'calc(100vw - 140px)' }}
+        >
           {TABS.map((tab) => {
             const active = activeTab === tab.id
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0"
                 style={{
                   background: active ? 'var(--surface-strong)' : 'transparent',
                   color: active ? 'var(--ink)' : 'var(--muted)',
+                  boxShadow: active ? '0 1px 4px rgba(17,24,39,0.10)' : 'none',
                 }}
               >
-                {tab.icon}
+                <span className="text-sm leading-none">{tab.icon}</span>
+                <span style={{ fontSize: '10px' }}>{tab.label}</span>
               </button>
             )
           })}
