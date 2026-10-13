@@ -167,9 +167,18 @@ export default function ExploreTab() {
       <div className="max-w-7xl mx-auto px-4 pb-16">
         {filtered.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {filtered.map((ins) => (
-              <InscriptionCard key={ins.id} inscription={ins} onOpen={() => setSelected(ins)} />
-            ))}
+            {filtered.map((ins) => {
+              const sorted = [...inscriptions].sort((a, b) => a.number - b.number)
+              const rank = sorted.findIndex((i) => i.id === ins.id)
+              return (
+                <InscriptionCard
+                  key={ins.id}
+                  inscription={ins}
+                  rank={rank >= 0 && rank < 10 ? rank + 1 : null}
+                  onOpen={() => setSelected(ins)}
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-24 gap-4">

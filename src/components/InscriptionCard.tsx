@@ -12,6 +12,7 @@ interface InscriptionCardProps {
   onOpen?: () => void
   showActions?: boolean
   compact?: boolean
+  rank?: number | null  // global rank (1-indexed), shown as badge if <= 10
 }
 
 function ContentTag({ type }: { type: string }) {
@@ -119,6 +120,7 @@ export default function InscriptionCard({
   onOpen,
   showActions = false,
   compact = false,
+  rank = null,
 }: InscriptionCardProps) {
   const [hover, setHover] = useState(false)
   const explorerUrl = buildTxExplorerUrl(TARGET_CHAIN_ID, ins.id)
@@ -158,6 +160,18 @@ export default function InscriptionCard({
             }}
           >
             {formatUsdc(listing.price)} USDC
+          </span>
+        )}
+        {!listing && rank !== null && rank <= 10 && (
+          <span
+            className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-bold"
+            style={{
+              background: rank === 1 ? '#f59e0b' : '#6366f1',
+              color: '#fff',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            }}
+          >
+            {rank === 1 ? '🥇 #1' : `⚡ #${rank}`}
           </span>
         )}
         <span
