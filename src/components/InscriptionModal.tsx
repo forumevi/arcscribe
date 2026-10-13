@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { toast } from 'sonner'
 import type { Inscription } from '../types'
 import { TARGET_CHAIN_ID } from '../config'
 import { buildTxExplorerUrl } from '@/onchain-facts'
@@ -89,6 +90,21 @@ export default function InscriptionModal({ inscription: ins, onClose, onList, on
   const explorerTx = buildTxExplorerUrl(TARGET_CHAIN_ID, ins.id)
   const date = new Date(ins.timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 
+  const shareText = `Inscription #${ins.number} — permanently inscribed on Arc. No IPFS. No servers. Just the chain. 🔗 arc-scribe.netlify.app`
+  const handleShare = () => {
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+      '_blank',
+      'width=550,height=420',
+    )
+  }
+  const handleEmbed = () => {
+    const code = `<iframe src="https://arc-scribe.netlify.app/inscription/${ins.number}" width="400" height="300" frameborder="0"></iframe>`
+    navigator.clipboard.writeText(code)
+      .then(() => toast.success('Embed code copied!'))
+      .catch(() => toast.error('Copy failed'))
+  }
+
   const typeLabel = ins.contentType.startsWith('image/') ? 'Image'
     : ins.contentType === 'application/json' ? 'ARC-20' : 'Text'
 
@@ -167,6 +183,16 @@ export default function InscriptionModal({ inscription: ins, onClose, onList, on
             className="px-4 py-2.5 rounded-xl text-sm font-semibold"
             style={{ background: 'var(--surface-muted)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
             Copy ID
+          </button>
+          <button onClick={handleShare}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: '#1da1f222', color: '#1da1f2' }}>
+            Share ✕
+          </button>
+          <button onClick={handleEmbed}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: 'var(--surface-muted)', color: 'var(--subtle)', border: '1px solid var(--border)' }}>
+            {'</>'}
           </button>
           {listing && onBuy && (
             <button onClick={() => { onBuy(); onClose() }}

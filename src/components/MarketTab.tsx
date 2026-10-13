@@ -443,9 +443,7 @@ export default function MarketTab() {
 
   const shown =
     tab === 'mine'
-      ? inscriptions.filter(
-          (i) => i.owner.toLowerCase() === address?.toLowerCase(),
-        )
+      ? inscriptions.filter((i) => i.owner.toLowerCase() === address?.toLowerCase())
       : inscriptions
 
   return (
@@ -457,12 +455,12 @@ export default function MarketTab() {
             Marketplace
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--subtle)' }}>
-            Buy and sell inscriptions. 2% fee on every sale.
+            Buy and sell inscriptions with USDC. 2% fee on every sale.
           </p>
         </div>
 
         {/* Tab filter */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(['all', 'mine'] as const).map((t) => (
             <button
               key={t}
@@ -483,17 +481,34 @@ export default function MarketTab() {
         </div>
       </div>
 
+      {/* How to sell guide */}
+      {tab === 'mine' && shown.length > 0 && (
+        <div
+          className="rounded-2xl p-4 flex gap-3 items-start text-sm"
+          style={{ background: 'var(--surface-strong)', border: '1px solid var(--border)' }}
+        >
+          <span className="text-xl shrink-0">💡</span>
+          <div style={{ color: 'var(--ink-2)' }}>
+            <span className="font-semibold" style={{ color: 'var(--ink)' }}>How to sell: </span>
+            Click an inscription below → <strong>List for sale</strong> → Deposit to marketplace → Set your USDC price.
+            Buyers pay USDC directly on Arc. You receive funds instantly on sale.
+          </div>
+        </div>
+      )}
+
       {shown.length === 0 ? (
         <div
-          className="py-20 text-center rounded-3xl space-y-3"
+          className="py-20 text-center rounded-3xl space-y-4"
           style={{ background: 'var(--surface)', border: '1.5px dashed var(--border)' }}
         >
           <div className="text-4xl opacity-30">⇌</div>
           <p className="font-semibold" style={{ color: 'var(--ink)' }}>
-            No inscriptions indexed yet
+            {tab === 'mine' ? 'No inscriptions in your wallet yet' : 'No inscriptions indexed yet'}
           </p>
           <p className="text-sm" style={{ color: 'var(--subtle)' }}>
-            Go to Inscribe and write something to Arc
+            {tab === 'mine'
+              ? 'Go to Inscribe to create your first inscription, then list it here for sale'
+              : 'Inscriptions appear here after the indexer scans the chain'}
           </p>
         </div>
       ) : (

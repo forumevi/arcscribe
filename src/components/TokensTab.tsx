@@ -100,10 +100,10 @@ export default function TokensTab({ onMintToken }: { onMintToken?: (tick: string
 
       {/* Protocol explainer */}
       <div
-        className="rounded-2xl p-5"
+        className="rounded-2xl p-5 space-y-4"
         style={{ background: 'var(--surface-strong)', border: '1px solid var(--border)' }}
       >
-        <h3 className="font-bold text-sm mb-3" style={{ color: 'var(--ink)' }}>
+        <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>
           How ARC-20 works
         </h3>
         <div className="grid sm:grid-cols-3 gap-4">
@@ -138,6 +138,29 @@ export default function TokensTab({ onMintToken }: { onMintToken?: (tick: string
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Why ARC-20 has value */}
+        <div
+          className="rounded-xl p-4 space-y-2"
+          style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)' }}
+        >
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--subtle)' }}>
+            Why ARC-20 tokens have value
+          </p>
+          <div className="grid sm:grid-cols-2 gap-2 text-xs" style={{ color: 'var(--ink-2)' }}>
+            {[
+              { icon: '⛓', text: 'No contract. 100% calldata — every token operation is permanently inscribed on Arc mainnet.' },
+              { icon: '🔒', text: 'Fixed supply. Defined at deploy, enforced by the protocol. Nobody can print more.' },
+              { icon: '⚡', text: 'Gas is USDC on Arc. Minting costs fractions of a cent — the cheapest token protocol on any chain.' },
+              { icon: '🌐', text: 'Permissionless. Anyone can deploy a ticker. Anyone can mint until supply runs out.' },
+            ].map(({ icon, text }) => (
+              <div key={icon} className="flex gap-2">
+                <span className="text-base shrink-0">{icon}</span>
+                <span className="leading-relaxed">{text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
