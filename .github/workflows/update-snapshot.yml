@@ -1,0 +1,34 @@
+name: Update Inscription Snapshot
+
+on:
+  schedule:
+    # Every hour at :15
+    - cron: '15 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run snapshot scanner
+        run: node scripts/update-snapshot.mjs
+        timeout-minutes: 10
+
+      - name: Commit updated snapshot if changed
+        run: |
+          git config user.name "arcscribe-bot"
+          git config user.email "bot@arcscribe.app"
+          git diff --quiet public/inscriptions.json || (
+            git add public/inscriptions.json &&
+            git commit -m "chore: update inscription snapshot [skip ci]" &&
+            git push
+          )
