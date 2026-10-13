@@ -58,7 +58,7 @@ function TopHolders({ token, holders }: { token: Arc20Token; holders: Arc20Balan
   )
 }
 
-export default function TokensTab() {
+export default function TokensTab({ onMintToken }: { onMintToken?: (tick: string) => void }) {
   const { address } = useAccount()
   const [tokens, setTokens] = useState<Arc20Token[]>([])
   const [myBalances, setMyBalances] = useState<Arc20Balance[]>([])
@@ -82,7 +82,7 @@ export default function TokensTab() {
     return onIndexUpdate(update)
   }, [address])
 
-  void mintingTick  // consumed below
+  void mintingTick
   void setMintingTick
 
   return (
@@ -301,9 +301,11 @@ export default function TokensTab() {
                   <button
                     onClick={() => {
                       if (pct >= 100) return
-                      toast.info(
-                        `Go to Inscribe → ARC-20 → Mint, enter tick "${token.tick}"`,
-                      )
+                      if (onMintToken) {
+                        onMintToken(token.tick)
+                      } else {
+                        toast.info(`Go to Inscribe → ARC-20 → Mint, enter tick "${token.tick}"`)
+                      }
                     }}
                     disabled={pct >= 100}
                     className="w-full py-3 rounded-2xl text-sm font-bold transition-all"

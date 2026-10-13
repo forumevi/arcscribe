@@ -44,7 +44,13 @@ async function waitForReceipt(txHash: string, maxAttempts = 40): Promise<'succes
   return 'timeout'
 }
 
-export default function MintTab() {
+interface MintPrefill {
+  mode: 'json'
+  op: 'mint'
+  tick: string
+}
+
+export default function MintTab({ prefill, onPrefillConsumed }: { prefill?: MintPrefill | null; onPrefillConsumed?: () => void }) {
   const { chainId, isConnected } = useAccount()
   const { switchChain } = useSwitchChain()
   const { sendTransaction, data: txHash, isPending } = useSendTransaction()
@@ -92,6 +98,15 @@ export default function MintTab() {
   const [arc20Amt, setArc20Amt] = useState('')
   const [arc20Max, setArc20Max] = useState('')
   const [arc20Lim, setArc20Lim] = useState('')
+
+  // Apply prefill from ARC-20 tab mint button
+  useEffect(() => {
+    if (!prefill) return
+    setMode(prefill.mode)
+    setArc20Op(prefill.op)
+    setArc20Tick(prefill.tick)
+    onPrefillConsumed?.()
+  }, [prefill, onPrefillConsumed])
 
   const wrongChain = isConnected && chainId !== TARGET_CHAIN_ID
 
